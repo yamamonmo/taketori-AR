@@ -112,8 +112,21 @@
     const tigerSound = document.getElementById('sound');
 
     // 3) マーカー検出ログ
-    marker.addEventListener('markerFound', () => console.log('[AR] marker FOUND'));
-    marker.addEventListener('markerLost',  () => console.log('[AR] marker LOST'));
+    marker.addEventListener('markerFound', () => {
+      console.log('[AR] marker FOUND. Playing tiger sound.');
+      // 一度再生を停止して最初から再生する
+      tigerSound.pause();
+      tigerSound.currentTime = 0;
+      tigerSound.play().catch(e => {
+        console.error('[Audio] Play failed:', e);
+      });
+    });
+
+    // マーカーが見失われたときにサウンドを停止
+    marker.addEventListener('markerLost', () => {
+      console.log('[AR] marker LOST. Pausing tiger sound.');
+      tigerSound.pause();
+    });
 
     // 4) GLB読み込み成功 → 表示 & 自動スケール（見えない/極小対策）
     tiger.addEventListener('model-loaded', (e) => {
