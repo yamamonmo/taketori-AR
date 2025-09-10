@@ -112,21 +112,53 @@
     const tigerSound = document.getElementById('sound');
     let volumeInterval; // 音量調整用のインターバルIDを保持する変数
 
-    // 3) マーカー検出ログ
-    marker.addEventListener('markerFound', () => {
-      console.log('[AR] marker FOUND. Playing tiger sound.');
-      // 一度再生を停止して最初から再生する
-      tigerSound.pause();
-      tigerSound.currentTime = 0;
-      tigerSound.play().catch(e => {
-        console.error('[Audio] Play failed:', e);
+    // マーカー検出時にモデルの表示とサウンド再生を制御
+    marker.addEventListener('markerFound', function() {
+      console.log('[AR] marker FOUND');
+      tiger.setAttribute('visible', true); // トラモデルを表示
+
+    // モデルのスケールを0.001から1まで徐々に拡大するアニメーション
+      tiger.setAttribute('animation__scale', {
+        property: 'scale',
+        from: '0.001 0.001 0.001',
+        to: '1 1 1', // 元のサイズまで拡大
+        dur: 1000,
+        easing: 'easeInOutQuad'
       });
+
+      // 唸り声を再生 (音量を徐々に上げる)
+      if (sound && sound.paused) {
+        sound.volume = 0; // 最初は音量を0に設定
+        sound.play();
+
+        // 音量を徐々に上げるインターバルを開始
+        volumeInterval = setInterval(() => {
+          if (sound.volume < 1) {
+            sound.volume += 0.05; // 0.05ずつ音量を上げる
+          } else {
+            sound.volume = 1; // 最大音量になったら1に固定
+            clearInterval(volumeInterval); // インターバルを停止
+          }
+        }, 50); // 50ミリ秒ごとに実行
+      }
     });
 
-    // マーカーが見失われたときにサウンドを停止
-    marker.addEventListener('markerLost', () => {
-      console.log('[AR] marker LOST. Pausing tiger sound.');
-      tigerSound.pause();
+    // マーカーが失われたときにモデルとサウンドを非表示・停止
+    marker.addEventListener('markerLost', function() {
+      console.log('[AR] marker LOST');
+      tiger.setAttribute('visible', false); // トラモデルを非表示
+
+      // 音量調整インターバルを停止
+      if (volumeInterval) {
+        clearInterval(volumeInterval);
+      }
+
+      // 唸り声を停止
+      if (sound) {
+        sound.pause();
+        sound.currentTime = 0; // 再生位置をリセット
+        sound.volume = 0; // 音量もリセット
+      }
     });
 
     // 4) GLB読み込み成功 → 表示 & 自動スケール（見えない/極小対策）
