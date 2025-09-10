@@ -110,6 +110,7 @@
     const marker = document.getElementById('marker');
     const tiger  = document.getElementById('tiger');
     const tigerSound = document.getElementById('sound');
+    let volumeInterval; // 音量調整用のインターバルIDを保持する変数
 
     // 3) マーカー検出ログ
     marker.addEventListener('markerFound', () => {
