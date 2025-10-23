@@ -2,8 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <title>Byobu Tiger AR (Debug)</title>
-  <!-- A-Frame & AR.js (CDN) -->
+  <title>竹取りシュミュレーション</title>
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
   <style>
@@ -13,9 +12,9 @@
       position: fixed;
       right: 1.2rem;
       bottom: 1.2rem;
-      width: 20vw;               /* 画面の約20% */
-      max-width: 420px;          /* 大きすぎ防止 */
-      min-width: 220px;          /* 小さすぎ防止 */
+      width: 20vw;
+      max-width: 420px;
+      min-width: 220px;
       z-index: 9999;
       background: rgba(0,0,0,0.55);
       color: #fff;
@@ -25,7 +24,7 @@
       border-radius: 12px;
       backdrop-filter: saturate(120%) blur(4px);
       box-shadow: 0 6px 24px rgba(0,0,0,0.3);
-      pointer-events: auto;       /* クリック可 */
+      pointer-events: auto;
     }
     .hud__inner{ padding: 0.8rem 0.9rem; }
     .hud__row{ display:flex; align-items:center; justify-content:space-between; gap:0.6rem; }
@@ -41,10 +40,10 @@
     }
     .hud__btn:hover{ background: rgba(255,255,255,0.18); }
     .hud__title{ margin:0.4rem 0 0.2rem; font-weight:600; font-size:0.95rem; }
-    .hud__kbd{ 
+    .hud__kbd{
       display:inline-block; min-width: 1.6rem; text-align:center;
-      padding: 0.05rem 0.35rem; margin: 0 0.2rem; 
-      border-radius: 6px; background: rgba(255,255,255,0.15); 
+      padding: 0.05rem 0.35rem; margin: 0 0.2rem;
+      border-radius: 6px; background: rgba(255,255,255,0.15);
       border: 1px solid rgba(255,255,255,0.25); font-weight:600;
     }
     .hud ul{ margin: 0.2rem 0 0; padding-left: 0.9rem; }
@@ -59,36 +58,38 @@
     arjs="sourceType: webcam; detectionMode: mono; maxDetectionRate: 30; debugUIEnabled: false;
           sourceWidth:640; sourceHeight:480; displayWidth:640; displayHeight:480">
 
-    <!-- 1) アセット定義：タイムアウト長め／ArrayBufferで確実に -->
     <a-assets timeout="20000">
-      <a-asset-item id="tigerModel" src="./assets/tiger.glb" response-type="arraybuffer"></a-asset-item>
-      <audio id="sound" src="./assets/voice.mp3" preload="auto"></audio>
+      <a-asset-item id="pandaModel" src="./assets/panda.glb" response-type="arraybuffer"></a-asset-item>
+      <a-asset-item id="moonModel" src="./assets/moon.glb" response-type="arraybuffer"></a-asset-item>
     </a-assets>
 
-    <!-- 2) マーカー：イベント発火ON -->
-    <a-marker id="marker" type="pattern" url="./assets/pattern-tora.patt" emitevents="true">
-
-      <!-- 2-1) 可視確認用プローブ（赤い箱が出れば .patt 読めている） -->
-      <!-- <a-box id="probe" position="0 0.5 0" depth="0.2" height="0.2" width="0.2" color="#E53935" visible="true"></a-box> -->
-
-
-      <!-- 2-2) トラ本体：最初は非表示。読み込み完了で表示＆自動スケール -->
-      <a-entity id="tiger"
-      gltf-model="#tigerModel"
+    <a-marker id="markerPanda" type="pattern" url="./assets/pattern-panda.patt" emitevents="true">
+      <a-entity id="panda"
+      gltf-model="#pandaModel"
       visible="false"
       position="0 0 0"
       rotation="-90 0 0"
       scale="0.001 0.001 0.001"
       animation-mixer>
       </a-entity>
+      <a-circle radius="0.5" rotation="-90 0 0" color="#f0e6d2" opacity="0.2"></a-circle>
+    </a-marker>
 
-      <!-- 目安の床（傾きやサイズ感の確認用） -->
+    <a-marker id="markerMoon" type="pattern" url="./assets/pattern-moon.patt" emitevents="true">
+      <a-entity id="moon"
+      gltf-model="#moonModel"
+      visible="false"
+      position="0 0 0"
+      rotation="-90 0 0"
+      scale="0.001 0.001 0.001"
+      animation-mixer>
+      </a-entity>
       <a-circle radius="0.5" rotation="-90 0 0" color="#f0e6d2" opacity="0.2"></a-circle>
     </a-marker>
 
     <a-entity camera></a-entity>
   </a-scene>
-  <!-- ===== HUD: フルスクリーン切替 & ホットキー一覧 ===== -->
+
   <div class="hud" aria-live="polite">
     <div class="hud__inner">
       <div class="hud__row">
@@ -103,164 +104,142 @@
         <li><span class="hud__kbd">↑</span> / <span class="hud__kbd">↓</span> … X回転（上下）</li>
         <li><span class="hud__kbd">←</span> / <span class="hud__kbd">→</span> … Y回転（左右）</li>
       </ul>
+      <div style="margin-top:0.4rem; font-size:0.85rem; color:#aaa;">※操作は現在検出中のモデルに適用されます</div>
     </div>
   </div>
+
   <script>
-    
-    const marker = document.getElementById('marker');
-    const tiger  = document.getElementById('tiger');
-    const tigerSound = document.getElementById('sound');
-    let volumeInterval; // 音量調整用のインターバルIDを保持する変数
+    // すべてのマーカーとモデルを取得（パンダと月のみ）
+    const markerPanda = document.getElementById('markerPanda');
+    const panda       = document.getElementById('panda');
+    const markerMoon  = document.getElementById('markerMoon');
+    const moon        = document.getElementById('moon');
 
-    // マーカー検出時にモデルの表示とサウンド再生を制御
-    marker.addEventListener('markerFound', function() {
-      console.log('[AR] marker FOUND');
-      tiger.setAttribute('visible', true); // トラモデルを表示
+    const models = [panda, moon];
+    let activeModel = null; // ★ 現在アクティブなモデル（操作対象）を保持する変数
 
-    // モデルのスケールを0.001から1まで徐々に拡大するアニメーション
-      tiger.setAttribute('animation__scale', {
-        property: 'scale',
-        from: '0.001 0.001 0.001',
-        to: '1 1 1', // 元のサイズまで拡大
-        dur: 1000,
-        easing: 'easeInOutQuad'
-      });
+    // モデルの自動スケーリング処理を関数化
+    function autoScaleModel(modelEntity) {
+      modelEntity.setAttribute('visible', 'true');
+      console.log(`[GLB] ${modelEntity.id} model-loaded.`);
 
-      // 唸り声を再生 (音量を徐々に上げる)
-      if (sound && sound.paused) {
-        sound.volume = 0; // 最初は音量を0に設定
-        sound.play();
-
-        // 音量を徐々に上げるインターバルを開始
-        volumeInterval = setInterval(() => {
-          if (sound.volume < 1) {
-            sound.volume += 0.05; // 0.05ずつ音量を上げる
-          } else {
-            sound.volume = 1; // 最大音量になったら1に固定
-            clearInterval(volumeInterval); // インターバルを停止
-          }
-        }, 50); // 50ミリ秒ごとに実行
-      }
-    });
-
-    // マーカーが失われたときにモデルとサウンドを非表示・停止
-    marker.addEventListener('markerLost', function() {
-      console.log('[AR] marker LOST');
-      tiger.setAttribute('visible', false); // トラモデルを非表示
-
-      // 音量調整インターバルを停止
-      if (volumeInterval) {
-        clearInterval(volumeInterval);
-      }
-
-      // 唸り声を停止
-      if (sound) {
-        sound.pause();
-        sound.currentTime = 0; // 再生位置をリセット
-        sound.volume = 0; // 音量もリセット
-      }
-    });
-
-    // 4) GLB読み込み成功 → 表示 & 自動スケール（見えない/極小対策）
-    tiger.addEventListener('model-loaded', (e) => {
-      console.log('[GLB] model-loaded:', e.detail);
-      tiger.setAttribute('visible', 'true');
-
-      // バウンディングボックスからサイズを計算し、体長(長辺)が0.8mになるようスケーリング
-      const mesh = tiger.getObject3D('mesh');
+      const mesh = modelEntity.getObject3D('mesh');
       if (mesh) {
         mesh.updateMatrixWorld(true);
         const box = new AFRAME.THREE.Box3().setFromObject(mesh);
         const size = new AFRAME.THREE.Vector3(); box.getSize(size);
-        console.log('[GLB] size (m):', size.x.toFixed(3), size.y.toFixed(3), size.z.toFixed(3));
+        console.log(`[GLB] ${modelEntity.id} size (m):`, size.x.toFixed(3), size.y.toFixed(3), size.z.toFixed(3));
 
         const targetLen = 0.005; // マーカー上に収まりやすい長さ
         const currentLen = Math.max(size.x, size.z);
         if (currentLen > 0) {
           const s = targetLen / currentLen;
-          tiger.setAttribute('scale', `${s} ${s} ${s}`);
-          console.log('[GLB] autoscale ->', s.toFixed(5));
+          modelEntity.setAttribute('scale', `${s} ${s} ${s}`);
+          console.log(`[GLB] ${modelEntity.id} autoscale ->`, s.toFixed(5)};
         } else {
-          console.warn('[GLB] size is zero? Check model content.');
+          console.warn(`[GLB] ${modelEntity.id} size is zero? Check model content.`);
         }
       } else {
-        console.warn('[GLB] mesh not found on model-loaded.');
+        console.warn(`[GLB] ${modelEntity.id} mesh not found on model-loaded.`);
+      }
+    }
+
+    // 3) マーカー検出ログ & アクティブモデル設定を共通化
+    function setupMarker(markerEl, modelEl) {
+      markerEl.addEventListener('markerFound', () => {
+        console.log(`[AR] marker FOUND: ${modelEl.id}`);
+        activeModel = modelEl; // 検出時にアクティブモデルを設定
+      });
+      markerEl.addEventListener('markerLost', () => {
+        console.log(`[AR] marker LOST: ${modelEl.id}`);
+        // 別のマーカーが検出されている可能性もあるため、自身がアクティブだった場合のみクリア
+        if (activeModel === modelEl) {
+          activeModel = null;
+        }
+      });
+    }
+
+    setupMarker(markerPanda, panda);
+    setupMarker(markerMoon, moon);
+
+
+    // 4) GLB読み込み成功 → 表示 & 自動スケール（すべてのモデルに適用）
+    models.forEach(model => {
+      model.addEventListener('model-loaded', () => {
+        autoScaleModel(model);
+      });
+
+      // 5) GLB読み込み失敗時の詳細ログ (すべてのモデルに適用)
+      model.addEventListener('model-error', (e) => {
+        console.error(`[GLB] ${model.id} model-error:`, e.detail);
+        console.error('原因例: パス違い/404, Draco/KTX2テクスチャ未対応, 破損, 同一生成元/CORS など');
+      });
+    });
+
+
+    // ==== フルスクリーン制御 (変更なし) ====
+    const fsBtn = document.getElementById('btnFullscreen');
+
+    function enterFullscreen(el) {
+      const target = el || document.documentElement;
+      const req = target.requestFullscreen || target.webkitRequestFullscreen || target.msRequestFullscreen;
+      if (req) req.call(target);
+    }
+    function exitFullscreen() {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+      if (exit) exit.call(document);
+    }
+    function isFullscreen() {
+      return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+    }
+    function updateFsButton() {
+      fsBtn.textContent = isFullscreen() ? '全画面を解除' : '全画面にする';
+    }
+
+    fsBtn.addEventListener('click', () => {
+      if (isFullscreen()) exitFullscreen(); else enterFullscreen(document.documentElement);
+    });
+    document.addEventListener('fullscreenchange', updateFsButton);
+    document.addEventListener('webkitfullscreenchange', updateFsButton);
+    updateFsButton();
+
+    // ==== ホットキー：ページスクロール抑制（変更なし） ====
+    window.addEventListener('keydown', (ev) => {
+      const arrowKeys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+      if (arrowKeys.includes(ev.key)) ev.preventDefault();
+    }, { passive: false });
+
+    // ====== ホットキー ======
+    window.addEventListener('keydown', (ev) => {
+      // ★ アクティブなモデルがない場合は操作しない
+      if (!activeModel) return;
+
+      const k = ev.key;
+      // scale
+      if (k === '[' || k === ']') {
+        const s = activeModel.getAttribute('scale');
+        const f = (k === '[') ? 0.9 : 1.1;
+        const nx = s.x * f, ny = s.y * f, nz = s.z * f;
+        activeModel.setAttribute('scale', `${nx} ${ny} ${nz}`);
+        console.log(`[ADJ] ${activeModel.id} scale = ${nx.toFixed(6)}`);
+      }
+      // yaw
+      if (k === 'ArrowLeft' || k === 'ArrowRight') {
+        const r = activeModel.getAttribute('rotation');
+        const delta = (k === 'ArrowLeft') ? -5 : 5;
+        const ny = r.y + delta;
+        activeModel.setAttribute('rotation', `${r.x} ${ny} ${r.z}`);
+        console.log(`[ADJ] ${activeModel.id} rotation = ${r.x} ${ny} ${r.z}`);
+      }
+      // pitch
+      if (k === 'ArrowUp' || k === 'ArrowDown') {
+        const r = activeModel.getAttribute('rotation');
+        const delta = (k === 'ArrowUp') ? -5 : 5;
+        const nx = r.x + delta;
+        activeModel.setAttribute('rotation', `${nx} ${r.y} ${r.z}`);
+        console.log(`[ADJ] ${activeModel.id} rotation = ${nx} ${r.y} ${r.z}`);
       }
     });
-
-    // 5) GLB読み込み失敗時の詳細ログ
-    tiger.addEventListener('model-error', (e) => {
-      console.error('[GLB] model-error:', e.detail);
-      console.error('原因例: パス違い/404, Draco/KTX2テクスチャ未対応, 破損, 同一生成元/CORS など');
-    });
-  
-    tiger.addEventListener('model-loaded', () => {
-    tiger.setAttribute('visible', 'true');
-    console.log('[GLB] model-loaded. Hotkeys: [ / ] = scale, ←→ = yaw, ↑↓ = pitch');
-  });
-  // ==== フルスクリーン制御 ====
-  const fsBtn = document.getElementById('btnFullscreen');
-
-  function enterFullscreen(el) {
-    const target = el || document.documentElement;
-    const req = target.requestFullscreen || target.webkitRequestFullscreen || target.msRequestFullscreen;
-    if (req) req.call(target);
-  }
-  function exitFullscreen() {
-    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-    if (exit) exit.call(document);
-  }
-  function isFullscreen() {
-    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
-  }
-  function updateFsButton() {
-    fsBtn.textContent = isFullscreen() ? '全画面を解除' : '全画面にする';
-  }
-
-  fsBtn.addEventListener('click', () => {
-    if (isFullscreen()) exitFullscreen(); else enterFullscreen(document.documentElement);
-  });
-  document.addEventListener('fullscreenchange', updateFsButton);
-  document.addEventListener('webkitfullscreenchange', updateFsButton);
-  updateFsButton();
-
-  // ==== ホットキー：ページスクロール抑制（矢印キー用） ====
-  window.addEventListener('keydown', (ev) => {
-    const arrowKeys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
-    if (arrowKeys.includes(ev.key)) ev.preventDefault();
-  }, { passive: false });
-
-  // ====== ホットキー ======
-  // [ / ] : スケール down / up
-  // ← → : Y軸回転（ヨー）-5°/+5°
-  // ↑ ↓ : X軸回転（ピッチ）-5°/+5°
-  window.addEventListener('keydown', (ev) => {
-    const k = ev.key;
-    // scale
-    if (k === '[' || k === ']') {
-      const s = tiger.getAttribute('scale');
-      const f = (k === '[') ? 0.9 : 1.1;
-      const nx = s.x * f, ny = s.y * f, nz = s.z * f;
-      tiger.setAttribute('scale', `${nx} ${ny} ${nz}`);
-      console.log(`[ADJ] scale = ${nx.toFixed(6)}`);
-    }
-    // yaw
-    if (k === 'ArrowLeft' || k === 'ArrowRight') {
-      const r = tiger.getAttribute('rotation');
-      const delta = (k === 'ArrowLeft') ? -5 : 5;
-      const ny = r.y + delta;
-      tiger.setAttribute('rotation', `${r.x} ${ny} ${r.z}`);
-      console.log(`[ADJ] rotation = ${r.x} ${ny} ${r.z}`);
-    }
-    // pitch
-    if (k === 'ArrowUp' || k === 'ArrowDown') {
-      const r = tiger.getAttribute('rotation');
-      const delta = (k === 'ArrowUp') ? -5 : 5;
-      const nx = r.x + delta;
-      tiger.setAttribute('rotation', `${nx} ${r.y} ${r.z}`);
-      console.log(`[ADJ] rotation = ${nx} ${r.y} ${r.z}`);
-    }
-  });
   </script>
 </body>
 </html>
