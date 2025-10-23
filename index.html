@@ -109,7 +109,7 @@
   </div>
 
   <script>
-    // すべてのマーカーとモデルを取得（パンダと月のみ）
+    // すべてのマーカーとモデルを取得
     const markerPanda = document.getElementById('markerPanda');
     const panda       = document.getElementById('panda');
     const markerMoon  = document.getElementById('markerMoon');
@@ -135,7 +135,8 @@
         if (currentLen > 0) {
           const s = targetLen / currentLen;
           modelEntity.setAttribute('scale', `${s} ${s} ${s}`);
-          console.log(`[GLB] ${modelEntity.id} autoscale ->`, s.toFixed(5)};
+          // ★ エラー修正箇所: console.logの閉じ括弧とセミコロンの位置を修正
+          console.log(`[GLB] ${modelEntity.id} autoscale ->`, s.toFixed(5));
         } else {
           console.warn(`[GLB] ${modelEntity.id} size is zero? Check model content.`);
         }
