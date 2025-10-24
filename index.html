@@ -2,8 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <title>竹取りシュミュレーション</title>
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <title>竹取りシュミュレーション</title> <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
   <style>
     body{margin:0;overflow:hidden}
@@ -55,10 +54,8 @@
     embedded
     vr-mode-ui="enabled:false"
     renderer="alpha:true; antialias:true; precision:mediump"
-    arjs="sourceType: webcam; detectionMode: mono; maxDetectionRate: 30; debugUIEnabled: false;
-          sourceWidth:640; sourceHeight:480; displayWidth:640; displayHeight:480">
-
-    <a-assets timeout="20000">
+    arjs="sourceType: webcam; detectionMode: mono; maxDetectionRate: 30; 
+          debugUIEnabled: true;  sourceWidth:640; sourceHeight:480; displayWidth:640; displayHeight:480"> <a-assets timeout="20000">
       <a-asset-item id="pandaModel" src="./assets/panda.glb" response-type="arraybuffer"></a-asset-item>
       <a-asset-item id="moonModel" src="./assets/moon.glb" response-type="arraybuffer"></a-asset-item>
     </a-assets>
@@ -109,16 +106,16 @@
   </div>
 
   <script>
-    // すべてのマーカーとモデルを取得
+    // マーカー/モデルの取得
     const markerPanda = document.getElementById('markerPanda');
     const panda       = document.getElementById('panda');
     const markerMoon  = document.getElementById('markerMoon');
     const moon        = document.getElementById('moon');
 
     const models = [panda, moon];
-    let activeModel = null; // ★ 現在アクティブなモデル（操作対象）を保持する変数
+    let activeModel = null;
 
-    // モデルの自動スケーリング処理を関数化
+    // モデルの自動スケーリング処理を関数化 (以前修正済み)
     function autoScaleModel(modelEntity) {
       modelEntity.setAttribute('visible', 'true');
       console.log(`[GLB] ${modelEntity.id} model-loaded.`);
@@ -130,13 +127,12 @@
         const size = new AFRAME.THREE.Vector3(); box.getSize(size);
         console.log(`[GLB] ${modelEntity.id} size (m):`, size.x.toFixed(3), size.y.toFixed(3), size.z.toFixed(3));
 
-        const targetLen = 0.005; // マーカー上に収まりやすい長さ
+        const targetLen = 0.005;
         const currentLen = Math.max(size.x, size.z);
         if (currentLen > 0) {
           const s = targetLen / currentLen;
           modelEntity.setAttribute('scale', `${s} ${s} ${s}`);
-          // ★ エラー修正箇所: console.logの閉じ括弧とセミコロンの位置を修正
-          console.log(`[GLB] ${modelEntity.id} autoscale ->`, s.toFixed(5));
+          console.log(`[ADJ] ${modelEntity.id} autoscale ->`, s.toFixed(5));
         } else {
           console.warn(`[GLB] ${modelEntity.id} size is zero? Check model content.`);
         }
@@ -145,15 +141,14 @@
       }
     }
 
-    // 3) マーカー検出ログ & アクティブモデル設定を共通化
+    // マーカー検出ログ & アクティブモデル設定を共通化
     function setupMarker(markerEl, modelEl) {
       markerEl.addEventListener('markerFound', () => {
         console.log(`[AR] marker FOUND: ${modelEl.id}`);
-        activeModel = modelEl; // 検出時にアクティブモデルを設定
+        activeModel = modelEl;
       });
       markerEl.addEventListener('markerLost', () => {
         console.log(`[AR] marker LOST: ${modelEl.id}`);
-        // 別のマーカーが検出されている可能性もあるため、自身がアクティブだった場合のみクリア
         if (activeModel === modelEl) {
           activeModel = null;
         }
@@ -164,13 +159,12 @@
     setupMarker(markerMoon, moon);
 
 
-    // 4) GLB読み込み成功 → 表示 & 自動スケール（すべてのモデルに適用）
+    // GLB読み込み成功/失敗時の処理
     models.forEach(model => {
       model.addEventListener('model-loaded', () => {
         autoScaleModel(model);
       });
 
-      // 5) GLB読み込み失敗時の詳細ログ (すべてのモデルに適用)
       model.addEventListener('model-error', (e) => {
         console.error(`[GLB] ${model.id} model-error:`, e.detail);
         console.error('原因例: パス違い/404, Draco/KTX2テクスチャ未対応, 破損, 同一生成元/CORS など');
@@ -178,7 +172,7 @@
     });
 
 
-    // ==== フルスクリーン制御 (変更なし) ====
+    // ==== フルスクリーン制御 (以前修正済み) ====
     const fsBtn = document.getElementById('btnFullscreen');
 
     function enterFullscreen(el) {
@@ -194,25 +188,27 @@
       return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
     }
     function updateFsButton() {
-      fsBtn.textContent = isFullscreen() ? '全画面を解除' : '全画面にする';
+      if (fsBtn) {
+        fsBtn.textContent = isFullscreen() ? '全画面を解除' : '全画面にする';
+      }
     }
 
-    fsBtn.addEventListener('click', () => {
-      if (isFullscreen()) exitFullscreen(); else enterFullscreen(document.documentElement);
-    });
-    document.addEventListener('fullscreenchange', updateFsButton);
-    document.addEventListener('webkitfullscreenchange', updateFsButton);
-    updateFsButton();
-
+    if (fsBtn) {
+        fsBtn.addEventListener('click', () => {
+            if (isFullscreen()) exitFullscreen(); else enterFullscreen(document.documentElement);
+        });
+        document.addEventListener('fullscreenchange', updateFsButton);
+        document.addEventListener('webkitfullscreenchange', updateFsButton);
+        updateFsButton();
+    }
     // ==== ホットキー：ページスクロール抑制（変更なし） ====
     window.addEventListener('keydown', (ev) => {
       const arrowKeys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
       if (arrowKeys.includes(ev.key)) ev.preventDefault();
     }, { passive: false });
 
-    // ====== ホットキー ======
+    // ====== ホットキー (複数モデル対応済み) ======
     window.addEventListener('keydown', (ev) => {
-      // ★ アクティブなモデルがない場合は操作しない
       if (!activeModel) return;
 
       const k = ev.key;
